@@ -306,24 +306,27 @@ body {
 
 .pagination {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12px;
-  font-size: 13px;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .pagination button {
-  padding: 6px 12px;
-  border-radius: 6px;
+  background: #163a5f;
   border: none;
-  background: #2563eb;
   color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
-  font-weight: 600;
+}
+
+.pagination button.active {
+  background: #4da3ff;
 }
 
 .pagination button:disabled {
-  background: #1e3a8a;
+  opacity: 0.4;
   cursor: not-allowed;
-  opacity: 0.6;
 }
+   
+

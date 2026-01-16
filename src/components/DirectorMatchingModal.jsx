@@ -6,79 +6,114 @@ import {
     useSensor,
     useSensors,
   } from "@dnd-kit/core";
+  import { useEffect, useState } from "react";
   
-import { useEffect, useState } from "react";
-import directorsData from "../data/directory.json";
-import { groupByPlanet } from "../utils/groupByPlanet";
-import DraggableDirector from "./DraggableDirector";
-import DropRoleCard from "./DropRoleCard";
-
-export default function DirectorMatchingModal({ onClose }) {
-    const [available, setAvailable] = useState(directorsData);
+  import directorsData from "../data/directory.json";
+  import { groupByPlanet } from "../utils/groupByPlanet";
+  import { paginateAndShuffle } from "../utils/shuffle";
+  
+  import DraggableDirector from "./DraggableDirector";
+  import DropRoleCard from "./DropRoleCard";
+  
+  export default function DirectorMatchingModal({ onClose }) {
+    const ITEMS_PER_PAGE = 10;
+  
     const [roles, setRoles] = useState(groupByPlanet(directorsData));
+    const [availablePages, setAvailablePages] = useState(() =>
+      paginateAndShuffle(directorsData, ITEMS_PER_PAGE)
+    );
+  
+    const [page, setPage] = useState(1);
     const [activeDirector, setActiveDirector] = useState(null);
-    const [timeLeft, setTimeLeft] = useState(94);
-
-
+    const [timeLeft, setTimeLeft] = useState(180);
+  
+    const currentAvailable = availablePages[page - 1] || [];
+    const paginatedRoles = roles.slice(
+      (page - 1) * ITEMS_PER_PAGE,
+      page * ITEMS_PER_PAGE
+    );
+  
+    const sensors = useSensors(
+      useSensor(PointerSensor, {
+        activationConstraint: { distance: 8 },
+      })
+    );
+  
+    useEffect(() => {
+      if (timeLeft === 0) return;
+      const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+      return () => clearInterval(timer);
+    }, [timeLeft]);
+  
     const handleDragStart = ({ active }) => {
-        const director = available.find((d) => d.id === active.id);
-        setActiveDirector(director);
+      const director = currentAvailable.find(
+        (d) => d && d.id === active.id
+      );
+      setActiveDirector(director || null);
     };
 
     const handleDragEnd = ({ active, over }) => {
+        setActiveDirector(null);
         if (!over) return;
-
-        const dragged = available.find((d) => d.id === active.id);
+      
+        const dragged = currentAvailable.find(
+          (d) => d && d.id === active.id
+        );
         if (!dragged) return;
-
-        // Assign director to role
+      
+        const targetRole = roles.find((r) => r.id === over.id);
+      
+        // BLOCK DROP IF ALREADY ASSIGNED
+        if (targetRole?.assigned) {
+          return;
+        }
+      
+        // ASSIGN DIRECTOR
         setRoles((prev) =>
-            prev.map((r) =>
-                r.id === over.id ? { ...r, assigned: dragged } : r
-            )
+          prev.map((r) =>
+            r.id === over.id ? { ...r, assigned: dragged } : r
+          )
         );
-
-        // Remove from available
-        setAvailable((prev) =>
-            prev.filter((d) => d.id !== active.id)
+      
+        // REMOVE FROM AVAILABLE LIST
+        setAvailablePages((prev) =>
+          prev.map((p, i) =>
+            i === page - 1
+              ? p.map((d) => (d?.id === active.id ? null : d))
+              : p
+          )
         );
-    };
-
-    // ❌ Cancel handler
+      };
+      
+  
     const handleCancel = (role) => {
-        if (!role.assigned) return;
-
-        setAvailable((prev) => [...prev, role.assigned]);
-
-        setRoles((prev) =>
-            prev.map((r) =>
-                r.id === role.id ? { ...r, assigned: null } : r
-            )
-        );
-    };
-
-
-    useEffect(() => {
-        if (timeLeft === 0) return;
-        const timer = setInterval(() => {
-            setTimeLeft((t) => t - 1);
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [timeLeft]);
-
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-          activationConstraint: {
-            distance: 8, // 👈 drag starts only after moving 8px
-          },
+      if (!role.assigned) return;
+  
+      setAvailablePages((prev) =>
+        prev.map((p, i) => {
+          if (i !== page - 1) return p;
+          const idx = p.findIndex((d) => d === null);
+          if (idx === -1) return p;
+          const copy = [...p];
+          copy[idx] = role.assigned;
+          return copy;
         })
       );
-
+  
+      setRoles((prev) =>
+        prev.map((r) =>
+          r.id === role.id ? { ...r, assigned: null } : r
+        )
+      );
+    };
+  
+    const totalPages = Math.ceil(directorsData.length / ITEMS_PER_PAGE);
+  
     return (
-        <div className="modal-backdrop">
-            <div className="modal">
+      <div className="modal-backdrop">
+        <div className="modal">
                 <div className="modal-content">
-                    <h2>DIRECTOR MATCHING CHALLENGE</h2>
+          <h2>DIRECTOR MATCHING CHALLENGE</h2>
                     <p>Technology Practice | Drag names to match the directors</p>
 
                     {/* TOP BAR */}
@@ -89,7 +124,7 @@ export default function DirectorMatchingModal({ onClose }) {
                         </div>
 
                         <div className="stat-box">
-                            <div className="stat-value">0/6</div>
+                            <div className="stat-value">0/20</div>
                             <div className="stat-label">MATCHED</div>
                         </div>
 
@@ -98,45 +133,72 @@ export default function DirectorMatchingModal({ onClose }) {
                             <div className="stat-label">TIME LEFT</div>
                         </div>
                     </div>
+  
 
-
-                    <DndContext
-                        sensors={sensors}   
-                        collisionDetection={closestCenter}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
-                    >
-                        <div className="layout">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="layout">
                             {/* LEFT */}
-                            <div className="roles">
-                                {roles.map((role) => (
-                                    <DropRoleCard key={role.id} role={role} onCancel={handleCancel} />
-                                ))}
-                            </div>
-
+              <div className="roles">
+                {paginatedRoles.map((role) => (
+                  <DropRoleCard
+                    key={role.id}
+                    role={role}
+                    onCancel={handleCancel}
+                  />
+                ))}
+              </div>
+  
                             {/* RIGHT */}
-                            <div className="directors">
-                                <h4>AVAILABLE DIRECTORS</h4>
-                                <div className="directors-grid">
-                                    {available.map((d) => (
-                                        <DraggableDirector key={d.id} director={d} />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
+              <div className="directors">
+                 <h4>AVAILABLE DIRECTORS</h4>
+                <div className="directors-grid">
+                  {currentAvailable
+                    ?.filter(Boolean)
+                    ?.map((d) => (
+                      <DraggableDirector key={d.id} director={d} />
+                    ))}
+                </div>
+              </div>
+            </div>
+  
                         {/* ✅ DRAG OVERLAY */}
-                        <DragOverlay>
-                            {activeDirector ? (
-                                <div className="drag-overlay">
-                                    {activeDirector.name}
-                                </div>
-                            ) : null}
-                        </DragOverlay>
-                    </DndContext>
+            <DragOverlay>
+              {activeDirector && (
+                <div className="drag-overlay">
+                  {activeDirector.name}
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
+  
+          <div className="pagination">
+            <button disabled={page === 1} onClick={() => setPage(page - 1)}>
+              ◀ Prev
+            </button>
+            {[...Array(totalPages)].map((_, i) => (
+              <button
+                key={i}
+                className={page === i + 1 ? "active" : ""}
+                onClick={() => setPage(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              Next ▶
+            </button>
+          </div>
 
-                    {/* INSTRUCTION */}
-                    <p className="instruction">
+            {/* INSTRUCTION */}
+            <p className="instruction">
                         Drag and drop director names onto the empty slots below each avatar
                     </p>
 
@@ -147,10 +209,11 @@ export default function DirectorMatchingModal({ onClose }) {
                         <button className="btn submit">Submit Answers</button>
                     </div>
                 </div>
-                <button className="close-btn" onClick={onClose}>
+                    <button className="close-btn" onClick={onClose}>
                     Close
                 </button>
-            </div>
         </div>
+      </div>
     );
-}
+  }
+  
