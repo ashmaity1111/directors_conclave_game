@@ -330,3 +330,8 @@ body {
 }
    
 
+.reset-warning {
+  color: #8a6d00;  
+  display: inline-block;
+  font-weight: 600;
+}
