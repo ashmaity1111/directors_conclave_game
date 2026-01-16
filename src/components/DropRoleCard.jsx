@@ -1,39 +1,44 @@
 import { useDroppable } from "@dnd-kit/core";
 
-export default function DropRoleCard({ role, onCancel }) {
+export default function DropRoleCard({ role, onCancel, submitted, result }) {
   const { setNodeRef, isOver } = useDroppable({
-    id: role.id,
+    id: role.id, 
   });
 
+  let resultClass = "";
+
+  if (submitted && role.assigned) {
+    resultClass = result?.isCorrect ? "correct" : "wrong";
+  }
+
   return (
-    <div className="role-card">
+    <div
+      ref={setNodeRef}
+      className={`role-card ${resultClass} ${isOver ? "over" : ""}`}
+    >
       <img
         src={role.photo_url}
         alt="Role"
         className="role-avatar"
       />
 
-      <h4 className="role-title">{role.planet}</h4>
-      <span className="subtitle">{role.geography}</span>
-
-      <div
-        ref={setNodeRef}
-        className={`drop-zone ${isOver ? "active" : ""}`}
-      >
+      <div className="drop-zone">
         {role.assigned ? (
-          <div className="assigned-director">
+          <>
             <span>{role.assigned.name}</span>
 
-            {/* ❌ appears ONLY after drop */}
-            <button
-              className="cancel-btn"
-              onClick={() => onCancel(role)}
-            >
-              ✕
-            </button>
-          </div>
+            {submitted && (
+              <span className="icon">
+                {result?.isCorrect ? "✔" : "✖"}
+              </span>
+            )}
+
+            {!submitted && (
+              <button onClick={() => onCancel(role)}>✕</button>
+            )}
+          </>
         ) : (
-          "Drag a name here"
+          <span className="placeholder">Drag a name here</span>
         )}
       </div>
     </div>

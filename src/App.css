@@ -26,7 +26,9 @@ body {
 .modal-content {
   flex: 1;                   
   overflow-y: auto;          
-  padding-right: 10px;
+}
+.matching{
+  font-size: x-large;
 }
 
 /* Smooth scrollbar */
@@ -309,6 +311,7 @@ body {
   justify-content: center;
   gap: 8px;
   margin-top: 16px;
+  margin-bottom: 10px;
 }
 
 .pagination button {
@@ -334,4 +337,83 @@ body {
   color: #8a6d00;  
   display: inline-block;
   font-weight: 600;
+}
+
+.role-card {
+  background: #0b1d2d;
+  border: 2px solid #1f3b55;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+  transition: all 0.3s ease;
+}
+
+.role-card.correct {
+  border-color: #2ecc71;
+  background: rgba(46, 204, 113, 0.15);
+}
+
+.role-card.wrong {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.15);
+}
+
+.drop-zone {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+}
+
+.drop-zone .icon {
+  font-size: 18px;
+  margin-left: 8px;
+}
+
+.result-summary {
+  text-align: center;
+
+}
+
+.result-summary .error {
+  color: #ff6b6b;
+  font-weight: bold;
+  display: block;
+}
+
+.result-summary .success {
+  color: #2ecc71;
+  display: block;
+}
+
+.role-card.over {
+  border-color: #4fc3f7;
+  background: rgba(79, 195, 247, 0.15);
+}
+
+.filters {
+  margin-top: 12px;
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag.planet {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.tag.geography {
+  background: #ecfeff;
+  color: #0f766e;
 }

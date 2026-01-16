@@ -30,7 +30,8 @@ export default function DirectorMatchingModal({ onClose }) {
   const [timeLeft, setTimeLeft] = useState(180);
   const [lastMatch, setLastMatch] = useState(null);
   const [resetInfo, setResetInfo] = useState(null);
-
+  const [submitted, setSubmitted] = useState(false);
+  const [results, setResults] = useState({});
 
   const currentAvailable = availablePages[page - 1] || [];
   const paginatedRoles = roles.slice(
@@ -44,11 +45,11 @@ export default function DirectorMatchingModal({ onClose }) {
     })
   );
 
-  useEffect(() => {
-    if (timeLeft === 0) return;
-    const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft]);
+  // useEffect(() => {
+  //   if (timeLeft === 0) return;
+  //   const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+  //   return () => clearInterval(timer);
+  // }, [timeLeft]);
 
   const handleDragStart = ({ active }) => {
     const director = currentAvailable.find(
@@ -134,7 +135,7 @@ export default function DirectorMatchingModal({ onClose }) {
   const matchedCount = roles?.filter((r) => r.assigned).length;
   const totalMatches = roles?.length;
 
-
+  
   let instructionMessage = (
     <>Drag and drop director names onto the empty slots below each avatar</>
   );
@@ -176,13 +177,60 @@ export default function DirectorMatchingModal({ onClose }) {
     );
   }
 
+  const handleResetAll = () => {
+    // reset roles (remove all assignments)
+    setRoles(groupByPlanet(filteredDirectors));
+
+    // reset available directors pagination
+    setAvailablePages(
+      paginateAndShuffle(filteredDirectors, ITEMS_PER_PAGE)
+    );
+
+    // reset page & messages
+    setPage(1);
+    setActiveDirector(null);
+    setLastMatch(null);
+    setResetInfo(null);
+    setSubmitted(false);
+    setResults({});
+  };
+
+  const normalize = (val = "") => val.trim().toLowerCase();
+
+const handleSubmitAnswers = () => {
+  const evaluated = {};
+
+  roles.forEach((role) => {
+    if (!role.assigned) return;
+
+    const dropped = role.assigned;
+    const isCorrect =
+      normalize(role.assigned.email) === normalize(dropped.email) &&
+      normalize(role.photo_url) === normalize(dropped.photo_url);
+    evaluated[role.id] = { isCorrect };
+  });
+
+  setResults(evaluated);
+  setSubmitted(true);
+};
+
 
   return (
     <div className="modal-backdrop">
       <div className="modal">
         <div className="modal-content">
-          <h2>DIRECTOR MATCHING CHALLENGE</h2>
+         <div className="filters">
+          <div className="matching"> DIRECTOR MATCHING CHALLENGE</div>
+             
+        <div className="tag planet">
+          🌍 Planet: Enterprise Technology & Performance
+        </div>
+        <div className="tag geography">
+          📍 Geography: Operations, Industry & Domain Solutions
+        </div>
           <p>Technology Practice | Drag names to match the directors</p>
+         
+      </div>
 
           {/* TOP BAR */}
           <div className="stats-bar">
@@ -217,6 +265,8 @@ export default function DirectorMatchingModal({ onClose }) {
                     key={role.id}
                     role={role}
                     onCancel={handleCancel}
+                    submitted={submitted}
+                    result={results[role.id]}
                   />
                 ))}
               </div>
@@ -266,15 +316,35 @@ export default function DirectorMatchingModal({ onClose }) {
           </div>
 
           {/* INSTRUCTION */}
-          <p className="instruction">
+          {
+            !submitted && 
+           (  <p className="instruction">
             {instructionMessage}
-          </p>
+          </p>)
+          }
+         
+          {submitted && (
+            <div className="result-summary">
+              <strong className="error">
+                ✖ {Object.values(results).filter(r => r.isCorrect).length}
+                {" "}of {roles.length} directors correctly matched
+              </strong>
+              <strong className="success">
+                +{Object.values(results).filter(r => r.isCorrect).length * 100}
+                {" "}points for correct matches
+              </strong>
+              <strong className="error">
+                {Object.values(results).filter(r => !r.isCorrect).length}
+                {" "}incorrect matches
+              </strong>
+            </div>
+          )}
 
           {/* ACTION BUTTONS */}
           <div className="actions">
-            <button className="btn reset">Reset All</button>
+            <button className="btn reset" onClick={handleResetAll}>Reset All</button>
             <button className="btn skip">Skip Challenge</button>
-            <button className="btn submit">Submit Answers</button>
+            <button className="btn submit" onClick={handleSubmitAnswers}>Submit Answers</button>
           </div>
         </div>
         <button className="close-btn" onClick={onClose}>
