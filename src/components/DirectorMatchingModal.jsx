@@ -32,11 +32,18 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
   const [resetInfo, setResetInfo] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [results, setResults] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
 
   const currentAvailable = availablePages[page - 1] || [];
   const paginatedRoles = roles.slice(
     (page - 1) * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE
+  );
+
+  const filteredAvailableDirectors = currentAvailable
+  ?.filter(Boolean)
+  ?.filter((d) =>
+    d.name.toLowerCase()?.includes(searchTerm.toLowerCase())
   );
 
   const sensors = useSensors(
@@ -50,6 +57,10 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
   //   const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
   //   return () => clearInterval(timer);
   // }, [timeLeft]);
+
+  useEffect(() => {
+  setSearchTerm("");
+}, [page]);
 
   const handleDragStart = ({ active }) => {
     const director = currentAvailable.find(
@@ -135,7 +146,7 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
   const matchedCount = roles?.filter((r) => r.assigned).length;
   const totalMatches = roles?.length;
 
-  
+
   let instructionMessage = (
     <>Drag and drop director names onto the empty slots below each avatar</>
   );
@@ -197,57 +208,57 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
 
   const normalize = (val = "") => val.trim().toLowerCase();
 
-const handleSubmitAnswers = () => {
-  const evaluated = {};
+  const handleSubmitAnswers = () => {
+    const evaluated = {};
 
-  roles.forEach((role) => {
-    if (!role.assigned) return;
+    roles.forEach((role) => {
+      if (!role.assigned) return;
 
-    const dropped = role.assigned;
-    const isCorrect =
-      normalize(role.assigned.email) === normalize(dropped.email) &&
-      normalize(role.photo_url) === normalize(dropped.photo_url);
-    evaluated[role.id] = { isCorrect };
-  });
+      const dropped = role.assigned;
+      const isCorrect =
+        normalize(role.assigned.email) === normalize(dropped.email) &&
+        normalize(role.photo_url) === normalize(dropped.photo_url);
+      evaluated[role.id] = { isCorrect };
+    });
 
-  setResults(evaluated);
-  setSubmitted(true);
+    setResults(evaluated);
+    setSubmitted(true);
 
-  const correctCount = Object.values(evaluated).filter(r => r.isCorrect).length;
-  const accuracy = Math.round((correctCount / roles.length) * 100);
+    const correctCount = Object.values(evaluated).filter(r => r.isCorrect).length;
+    const accuracy = Math.round((correctCount / roles.length) * 100);
 
-  const finalResult = {
-    score: correctCount * 100,
-    correct: correctCount,
-    total: roles.length,
-    accuracy,
-    timeTaken: 180 - timeLeft,
-    performance: accuracy >= 70 ? "Good Job" : "Needs Practice",
+    const finalResult = {
+      score: correctCount * 100,
+      correct: correctCount,
+      total: roles.length,
+      accuracy,
+      timeTaken: 180 - timeLeft,
+      performance: accuracy >= 70 ? "Good Job" : "Needs Practice",
+    };
+
+    // ⏳ WAIT 5 SECONDS → CLOSE THIS MODAL → OPEN RESULT MODAL
+    setTimeout(() => {
+      onComplete(finalResult);
+    }, 5000);
   };
-
-  // ⏳ WAIT 5 SECONDS → CLOSE THIS MODAL → OPEN RESULT MODAL
-  setTimeout(() => {
-    onComplete(finalResult);
-  }, 5000);
-};
 
 
   return (
     <div className="modal-backdrop">
       <div className="modal">
         <div className="modal-content">
-         <div className="filters">
-          <div className="matching"> DIRECTOR MATCHING CHALLENGE</div>
-             
-        <div className="tag planet">
-          🌍 Planet: Enterprise Technology & Performance
-        </div>
-        <div className="tag geography">
-          📍 Geography: Operations, Industry & Domain Solutions
-        </div>
-          <p>Technology Practice | Drag names to match the directors</p>
-         
-      </div>
+          <div className="filters">
+            <div className="matching"> DIRECTOR MATCHING CHALLENGE</div>
+
+            <div className="tag planet">
+              🌍 Planet: Enterprise Technology & Performance
+            </div>
+            <div className="tag geography">
+              📍 Geography: Operations, Industry & Domain Solutions
+            </div>
+            <p>Technology Practice | Drag names to match the directors</p>
+
+          </div>
 
           {/* TOP BAR */}
           <div className="stats-bar">
@@ -291,12 +302,18 @@ const handleSubmitAnswers = () => {
               {/* RIGHT */}
               <div className="directors">
                 <h4>AVAILABLE DIRECTORS</h4>
+                <input
+                  type="text"
+                  placeholder="Search director name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="director-search"
+                />
                 <div className="directors-grid">
-                  {currentAvailable
-                    ?.filter(Boolean)
+                  {filteredAvailableDirectors
                     ?.map((d) => (
                       <DraggableDirector key={d.id} director={d} />
-                    ))}
+                  ))}
                 </div>
               </div>
             </div>
@@ -334,12 +351,12 @@ const handleSubmitAnswers = () => {
 
           {/* INSTRUCTION */}
           {
-            !submitted && 
+            !submitted &&
            (  <p className="instruction">
-            {instructionMessage}
-          </p>)
+              {instructionMessage}
+            </p>)
           }
-         
+
           {submitted && (
             <div className="result-summary">
               <strong className="error">

@@ -493,3 +493,11 @@ body {
   font-size: 16px;
   cursor: pointer;
 }
+
+.director-search {
+  width: 90%;
+  padding: 8px 10px;
+  margin: 8px 0 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
