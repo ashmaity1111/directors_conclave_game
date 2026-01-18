@@ -15,7 +15,7 @@ import DraggableDirector from "./DraggableDirector";
 import DropRoleCard from "./DropRoleCard";
 import { getFilteredDirectors } from "../utils/helpers";
 
-export default function DirectorMatchingModal({ onClose }) {
+export default function DirectorMatchingModal({ onClose, onComplete }) {
   const ITEMS_PER_PAGE = 10;
 
   const [roles, setRoles] = useState(() =>
@@ -212,6 +212,23 @@ const handleSubmitAnswers = () => {
 
   setResults(evaluated);
   setSubmitted(true);
+
+  const correctCount = Object.values(evaluated).filter(r => r.isCorrect).length;
+  const accuracy = Math.round((correctCount / roles.length) * 100);
+
+  const finalResult = {
+    score: correctCount * 100,
+    correct: correctCount,
+    total: roles.length,
+    accuracy,
+    timeTaken: 180 - timeLeft,
+    performance: accuracy >= 70 ? "Good Job" : "Needs Practice",
+  };
+
+  // ⏳ WAIT 5 SECONDS → CLOSE THIS MODAL → OPEN RESULT MODAL
+  setTimeout(() => {
+    onComplete(finalResult);
+  }, 5000);
 };
 
 
