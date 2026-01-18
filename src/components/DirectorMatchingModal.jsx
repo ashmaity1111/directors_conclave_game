@@ -13,7 +13,7 @@ import { paginateAndShuffle } from "../utils/shuffle";
 
 import DraggableDirector from "./DraggableDirector";
 import DropRoleCard from "./DropRoleCard";
-import { getFilteredDirectors } from "../utils/helpers";
+import { getFilteredDirectors, getInitialTime } from "../utils/helpers";
 
 export default function DirectorMatchingModal({ onClose, onComplete }) {
   const ITEMS_PER_PAGE = 10;
@@ -27,7 +27,9 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
 
   const [page, setPage] = useState(1);
   const [activeDirector, setActiveDirector] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(180);
+  const [timeLeft, setTimeLeft] = useState(() =>
+    getInitialTime(groupByPlanet(getFilteredDirectors()).length)
+  );
   const [lastMatch, setLastMatch] = useState(null);
   const [resetInfo, setResetInfo] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -41,10 +43,10 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
   );
 
   const filteredAvailableDirectors = currentAvailable
-  ?.filter(Boolean)
-  ?.filter((d) =>
-    d.name.toLowerCase()?.includes(searchTerm.toLowerCase())
-  );
+    ?.filter(Boolean)
+    ?.filter((d) =>
+      d.name.toLowerCase()?.includes(searchTerm.toLowerCase())
+    );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -52,15 +54,24 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
     })
   );
 
-  // useEffect(() => {
-  //   if (timeLeft === 0) return;
-  //   const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
-  //   return () => clearInterval(timer);
-  // }, [timeLeft]);
+  useEffect(() => {
+    if (submitted) return;
+    if (timeLeft <= 0) {
+      handleSubmitAnswers("auto");
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((t) => t - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, submitted]);
+
 
   useEffect(() => {
-  setSearchTerm("");
-}, [page]);
+    setSearchTerm("");
+  }, [page]);
 
   const handleDragStart = ({ active }) => {
     const director = currentAvailable.find(
@@ -145,7 +156,7 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
   );
   const matchedCount = roles?.filter((r) => r.assigned).length;
   const totalMatches = roles?.length;
-
+  const initialTime = getInitialTime(groupByPlanet(getFilteredDirectors()).length);
 
   let instructionMessage = (
     <>Drag and drop director names onto the empty slots below each avatar</>
@@ -196,7 +207,7 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
     setAvailablePages(
       paginateAndShuffle(filteredDirectors, ITEMS_PER_PAGE)
     );
-
+    setTimeLeft(getInitialTime(filteredDirectors?.length));
     // reset page & messages
     setPage(1);
     setActiveDirector(null);
@@ -208,7 +219,7 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
 
   const normalize = (val = "") => val.trim().toLowerCase();
 
-  const handleSubmitAnswers = () => {
+  const handleSubmitAnswers = (type) => {
     const evaluated = {};
 
     roles.forEach((role) => {
@@ -223,6 +234,7 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
 
     setResults(evaluated);
     setSubmitted(true);
+    const timeTaken = initialTime - timeLeft;
 
     const correctCount = Object.values(evaluated).filter(r => r.isCorrect).length;
     const accuracy = Math.round((correctCount / roles.length) * 100);
@@ -232,14 +244,16 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
       correct: correctCount,
       total: roles.length,
       accuracy,
-      timeTaken: 180 - timeLeft,
+      timeTaken: type === "auto" ? initialTime : timeTaken,
       performance: accuracy >= 70 ? "Good Job" : "Needs Practice",
+      source: type
     };
 
-    // ⏳ WAIT 5 SECONDS → CLOSE THIS MODAL → OPEN RESULT MODAL
-    setTimeout(() => {
+    if (type === "manual") {
+      setTimeout(() => onComplete(finalResult), 5000);
+    } else {
       onComplete(finalResult);
-    }, 5000);
+    }
   };
 
 
@@ -313,7 +327,7 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
                   {filteredAvailableDirectors
                     ?.map((d) => (
                       <DraggableDirector key={d.id} director={d} />
-                  ))}
+                    ))}
                 </div>
               </div>
             </div>
@@ -352,7 +366,7 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
           {/* INSTRUCTION */}
           {
             !submitted &&
-           (  <p className="instruction">
+            (<p className="instruction">
               {instructionMessage}
             </p>)
           }
@@ -378,7 +392,7 @@ export default function DirectorMatchingModal({ onClose, onComplete }) {
           <div className="actions">
             <button className="btn reset" onClick={handleResetAll}>Reset All</button>
             <button className="btn skip">Skip Challenge</button>
-            <button className="btn submit" onClick={handleSubmitAnswers}>Submit Answers</button>
+            <button className="btn submit" onClick={() => handleSubmitAnswers("manual")}>Submit Answers</button>
           </div>
         </div>
         <button className="close-btn" onClick={onClose}>
